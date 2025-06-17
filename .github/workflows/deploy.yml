@@ -27,6 +27,12 @@ jobs:
           tar czf remix-build.tar.gz \
             build public package.json package-lock.json
 
+      - name: Add Droplet to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
+            >> ~/.ssh/known_hosts
+      
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
