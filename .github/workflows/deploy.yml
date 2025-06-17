@@ -25,7 +25,7 @@ jobs:
       - name: Archive build
         run: |
           tar czf remix-build.tar.gz \
-            build public package.json package-lock.json ecosystem.config.js
+            build public package.json package-lock.json ecosystem.config.cjs
 
       - name: Add Droplet to known_hosts
         run: |
