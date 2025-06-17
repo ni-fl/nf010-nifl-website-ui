@@ -2,7 +2,7 @@ name: CI / CD – Remix → DigitalOcean
 
 on:
   push:
-    branches: [ main ]
+    branches: [ production ]
 
 jobs:
   build-and-deploy:
