@@ -25,7 +25,7 @@ jobs:
       - name: Archive build
         run: |
           tar czf remix-build.tar.gz \
-            build public package.json package-lock.json
+            build public package.json package-lock.json ecosystem.config.js
 
       - name: Add Droplet to known_hosts
         run: |
@@ -59,4 +59,4 @@ jobs:
             # Start or reload via PM2
             pm2 start ecosystem.config.js --update-env --only my-remix-app
             pm2 save
-            EOF
+          EOF
