@@ -1,0 +1,56 @@
+name: CI / CD – Remix → DigitalOcean
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Remix
+        run: npm run build
+
+      - name: Archive build
+        run: |
+          tar czf remix-build.tar.gz \
+            build public package.json package-lock.json
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy build to server
+        run: |
+          scp -P ${{ secrets.SERVER_PORT }} \
+            remix-build.tar.gz \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~
+
+      - name: SSH & deploy
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
+            set -e
+            mkdir -p "${{ secrets.REMOTE_PATH }}"
+            tar xzf ~/remix-build.tar.gz -C "${{ secrets.REMOTE_PATH }}"
+            rm ~/remix-build.tar.gz
+
+            cd "${{ secrets.REMOTE_PATH }}"
+            npm ci --omit=dev
+
+            # Start or reload via PM2
+            pm2 start ecosystem.config.js --update-env --only my-remix-app
+            pm2 save
+            EOF
