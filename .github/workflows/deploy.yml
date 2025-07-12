@@ -59,4 +59,4 @@ jobs:
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/\${REMOTE_PATH}/scripts/deploy.sh"
+            "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
