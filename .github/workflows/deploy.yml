@@ -5,55 +5,55 @@ on:
     branches: [ production ]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
+      # 1) Checkout & build
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Install dependencies & build
+      - name: Install & build
         run: |
           npm ci
           npm run build
-
-      - name: Archive build
-        run: |
           tar czf remix-build.tar.gz \
             build public package.json package-lock.json ecosystem.config.cjs
 
+      # 2) SSH auth setup
       - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
             >> ~/.ssh/known_hosts
-
-      - name: Start SSH agent and load key
+      - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Prepare remote dirs
+      # 3) Copy artifacts
+      - name: Prepare remote dirs & copy files
         run: |
+          # Create app dir + scripts subdir
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts"
-
-      - name: Copy build & deploy script
-        run: |
+            "mkdir -p ~/${{ secrets.REMOTE_PATH }}/scripts"
+          
+          # Copy the build tarball to home (so deploy.sh can find ~/remix-build.tar.gz)
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/"
+          
+          # Copy your deploy script into scripts/
+          scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/scripts/"
 
+      # 4) Run the deploy
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
-             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+             bash ~/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
