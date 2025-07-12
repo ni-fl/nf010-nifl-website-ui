@@ -17,8 +17,8 @@ rm -rf "${REMOTE:?}/"*
 mkdir -p "$REMOTE"
 
 # ─── Unpack new build ────────────────────────────
-tar xzf ~/remix-build.tar.gz -C "$REMOTE"
-rm ~/remix-build.tar.gz
+tar xzf $REMOTE/remix-build.tar.gz -C "$REMOTE"
+rm $REMOTE/remix-build.tar.gz
 
 cd "$REMOTE"
 
