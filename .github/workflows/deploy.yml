@@ -52,6 +52,8 @@ jobs:
 
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$HOME/.bashrc" ]   && \. "$HOME/.bashrc"
             
             mkdir -p "${{ secrets.REMOTE_PATH }}"
             tar xzf ~/remix-build.tar.gz -C "${{ secrets.REMOTE_PATH }}"
