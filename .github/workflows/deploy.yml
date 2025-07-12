@@ -38,19 +38,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Copy build to server
+      - name: Ensure remote dirs exist
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p \$HOME/${{ secrets.REMOTE_PATH }}/scripts"
+            "mkdir -p ~/${{ secrets.REMOTE_PATH }}/scripts"
+
+      - name: Copy build archive & deploy script
+        run: |
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:\$HOME/${{ secrets.REMOTE_PATH }}/scripts/"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/"
 
-      - name: SSH & deploy
+      - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash \$HOME/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
-            
+            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/\${REMOTE_PATH}/scripts/deploy.sh"
