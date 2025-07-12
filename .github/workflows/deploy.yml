@@ -47,23 +47,29 @@ jobs:
       - name: SSH & deploy
         run: |
           ssh -tt -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            bash -l -c $'\
-              set -e;\
-              echo "→ Remote PATH: $PATH";\
-              echo "→ node: $(which node) $(node -v || echo missing)";\
-              echo "→ npm:  $(which npm)  $(npm -v  || echo missing)";\
-              \
-              mkdir -p "${{ secrets.REMOTE_PATH }}";\
-              tar xzf ~/remix-build.tar.gz -C "${{ secrets.REMOTE_PATH }}";\
-              rm ~/remix-build.tar.gz;\
-              \
-              cd "${{ secrets.REMOTE_PATH }}";\
-              npm ci --omit=dev;\
-              \
-              # reload if exists, else start fresh \
-              pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui \
-                || pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui;\
-              pm2 save;\
-            '
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
+            set -e
+
+            REMOTE="$HOME/${{ secrets.REMOTE_PATH }}"
+
+            # Clean out any old release
+            rm -rf "$REMOTE"
+            mkdir -p "$REMOTE"
+
+            # Unpack the new build
+            tar xzf ~/remix-build.tar.gz -C "$REMOTE"
+            rm ~/remix-build.tar.gz
+
+            cd "$REMOTE"
+
+            # Fresh install of production deps
+            npm ci --omit=dev
+
+            # Reload if already running, otherwise start fresh
+            pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui \
+              || pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui
+
+            # Persist across reboots
+            pm2 save
+            EOF
           
