@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# (we'll pass REMOTE_PATH in as an env var)
+# abort if REMOTE_PATH is unset or empty
+: "${REMOTE_PATH:?REMOTE_PATH must be set}"
+
 REMOTE="$HOME/${REMOTE_PATH}"
 
-# ─── Clean old release ───────────────────────────
-rm -rf "$REMOTE"
+# refuse to delete HOME itself
+if [ "$REMOTE" = "$HOME" ]; then
+  echo "Refusing to rm -rf home directory!" >&2
+  exit 1
+fi
+
+# remove only the *contents* of REMOTE, not the directory itself
+rm -rf "${REMOTE:?}/"*
 mkdir -p "$REMOTE"
 
 # ─── Unpack new build ────────────────────────────
