@@ -4,10 +4,6 @@ set -e
 # (we'll pass REMOTE_PATH in as an env var)
 REMOTE="$HOME/${REMOTE_PATH}"
 
-if [ -d "$REMOTE" ]; then
-  sudo chown -R "$(whoami):$(whoami)" "$REMOTE"
-fi
-
 # ─── Clean old release ───────────────────────────
 rm -rf "$REMOTE"
 mkdir -p "$REMOTE"
