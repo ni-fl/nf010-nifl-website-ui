@@ -21,37 +21,39 @@ jobs:
         run: |
           npm ci
           npm run build
-          
+
       - name: Archive build
         run: |
           tar czf remix-build.tar.gz \
             build public package.json package-lock.json ecosystem.config.cjs
 
-      - name: Setup SSH key
+      - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
             >> ~/.ssh/known_hosts
 
+      - name: Start SSH agent and load key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Prepare remote dirs
         run: |
-          ssh -i ~/.ssh/id_rsa -p "${{ secrets.SERVER_PORT }}" \
+          ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "mkdir -p /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts"
 
       - name: Copy build & deploy script
         run: |
-          scp -i ~/.ssh/id_rsa -P "${{ secrets.SERVER_PORT }}" \
+          scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
             scripts/deploy.sh \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/"
 
       - name: Run deploy script
         run: |
-          ssh -i ~/.ssh/id_rsa -p "${{ secrets.SERVER_PORT }}" \
+          ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
              bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
-
