@@ -37,7 +37,22 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
+          
+      - name: Run deploy script (with debug echo)
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            " \
+              REMOTE_HOME=/home/${{ secrets.SERVER_USER }}; \
+              APP_DIR=\${REMOTE_HOME}/${{ secrets.REMOTE_PATH }}; \
+              SCRIPT_PATH=\${APP_DIR}/scripts/deploy.sh; \
+              echo \"→ REMOTE_HOME:      \$REMOTE_HOME\"; \
+              echo \"→ APP_DIR:          \$APP_DIR\"; \
+              echo \"→ SCRIPT_PATH:      \$SCRIPT_PATH\"; \
+              ls -l \"\$SCRIPT_PATH\" || echo \"(script missing)\"; \
+              bash \"\$SCRIPT_PATH\" \
+            "
+            
       - name: Prepare remote dirs
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
