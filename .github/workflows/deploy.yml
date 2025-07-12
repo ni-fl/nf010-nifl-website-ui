@@ -43,33 +43,11 @@ jobs:
           scp -P ${{ secrets.SERVER_PORT }} \
             remix-build.tar.gz \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~
-
+          scp -r -P ${{ secrets.SERVER_PORT }} \
+            scripts \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~
       - name: SSH & deploy
         run: |
-          ssh -tt -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
-            set -e
-
-            REMOTE="$HOME/${{ secrets.REMOTE_PATH }}"
-
-            # Clean out any old release
-            rm -rf "$REMOTE"
-            mkdir -p "$REMOTE"
-
-            # Unpack the new build
-            tar xzf ~/remix-build.tar.gz -C "$REMOTE"
-            rm ~/remix-build.tar.gz
-
-            cd "$REMOTE"
-
-            # Fresh install of production deps
-            npm ci --omit=dev
-
-            # Reload if already running, otherwise start fresh
-            pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui \
-              || pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui
-
-            # Persist across reboots
-            pm2 save
-          EOF
-          
+          ssh -tt -p ${{ secrets.SERVER_PORT }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/scripts/deploy.sh"
