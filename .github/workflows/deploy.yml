@@ -55,6 +55,6 @@ jobs:
              rm ~/remix-build.tar.gz; \
              cd \"\$REMOTE\"; \
              npm ci --omit=dev; \
-             pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui || \
-               pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui; \
+             pm2 reload ecosystem.config.cjs --env production --only my-remix-app || \
+               pm2 start ecosystem.config.cjs --env production --only my-remix-app; \
              pm2 save"
