@@ -10,12 +10,10 @@ jobs:
     steps:
       # 1) Checkout & build
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install & build
         run: |
           npm ci
@@ -27,13 +25,15 @@ jobs:
       - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" \
+            >> ~/.ssh/known_hosts
 
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # 3) Sanity check deploy script
       - name: Ensure deploy script exists
         run: |
           if [[ ! -f scripts/deploy.sh ]]; then
@@ -41,28 +41,26 @@ jobs:
             exit 1
           fi
 
-      # 3) Prepare remote directories
-      - name: Prepare remote dirs
+      # 4) Create remote dirs and copy artifacts
+      - name: Copy artifacts to server
         run: |
+          REMOTE_DIR="/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}"
+          echo "→ Creating remote directories at $REMOTE_DIR/scripts"
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts"
+            "mkdir -p \"$REMOTE_DIR/scripts\""
 
-      # 4) Copy build archive
-      - name: Copy build archive
-        run: |
+          echo "→ Copying build archive"
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/remix-build.tar.gz"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/remix-build.tar.gz"
 
-      # 5) Copy deploy script
-      - name: Copy deploy script
-        run: |
+          echo "→ Copying deploy script"
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/scripts/deploy.sh"
 
-      # 6) Run the deploy
+      # 5) Run the deploy script
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
