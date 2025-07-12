@@ -14,7 +14,8 @@ export default function Index() {
         <header className="flex flex-col items-center gap-9">
           <h1 className="leading text-2xl font-bold text-gray-800 dark:text-gray-100">
             Muahahahaahah from <span className="sr-only">Remix</span> <br/>
-	    You are my Hero!
+	    You are my Heroine!
+
           </h1>
           <div className="h-[144px] w-[434px]">
             <img

@@ -1,60 +1,61 @@
-name: CI / CD – Remix → DigitalOcean
+# NAME
+name: deploy
 
+# TRIGGER
 on:
   push:
-    branches: [ production ]
+    branches: [production]
 
+# JOBS
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1) Checkout & build
+
+      # CHECKOUT
       - name: Checkout
         uses: actions/checkout@v4
 
+      # SETUP NODE.JS
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install & build
+      # INSTALL AND BUILD
+      - name: Install and build
         run: |
           npm ci
           npm run build
           tar czf remix-build.tar.gz build public package.json package-lock.json ecosystem.config.cjs
 
-      # 2) SSH setup
+      # INSTALL AND BUILD
       - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
-            >> ~/.ssh/known_hosts
+          ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
+      # START SSH AGENT
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3) Deploy
+      # COPY AND DEPLOY
       - name: Copy and deploy
         run: |
-          # Copy the build archive to home
-          scp -P "${{ secrets.SERVER_PORT }}" \
-            remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
-
-          # SSH in and run the whole deploy in one go
+          scp -P "${{ secrets.SERVER_PORT }}" remix-build.tar.gz "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "set -e; \
-             REMOTE=\$HOME/${{ secrets.REMOTE_PATH }}; \
-             rm -rf \"\$REMOTE\"/*; \
-             mkdir -p \"\$REMOTE\"; \
-             tar xzf ~/remix-build.tar.gz -C \"\$REMOTE\"; \
-             rm ~/remix-build.tar.gz; \
-             cd \"\$REMOTE\"; \
+             rm -rf \"\$HOME/${{ secrets.REMOTE_PATH }}\"/*; \
+             mkdir -p \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
+             tar xzf \"\$HOME/remix-build.tar.gz\" -C \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
+             rm \"\$HOME/remix-build.tar.gz\"; \
+             cd \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
              npm ci --omit=dev; \
-             pm2 reload ecosystem.config.cjs --env production --only my-remix-app || \
-               pm2 start ecosystem.config.cjs --env production --only my-remix-app; \
+             pm2 reload ecosystem.config.cjs --env production --only my-remix-app; \
+             pm2 start ecosystem.config.cjs --env production --only my-remix-app; \
              pm2 save"
+
