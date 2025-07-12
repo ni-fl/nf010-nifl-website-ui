@@ -35,25 +35,24 @@ jobs:
       # 3) Copy artifacts
       - name: Prepare remote dirs & copy files
         run: |
-          # Create app dir + scripts subdir
+          # 1) Make sure /home/deployer/Development/projects/nf010-nifl-website-ui/scripts exists
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p \$HOME/${{ secrets.REMOTE_PATH }}/scripts"
-          
-          # Copy the build tarball to home (so deploy.sh can find ~/remix-build.tar.gz)
+            "mkdir -p /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts"
+      
+          # 2) Copy the build tarball into the app root
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/"
-          
-          # Copy your deploy script into scripts/
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/"
+      
+          # 3) Copy your deploy script into that scripts/ folder
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:\$HOME/${{ secrets.REMOTE_PATH }}/scripts/"
-
-      # 4) Run the deploy
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/"
+      
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
-             bash ~/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
