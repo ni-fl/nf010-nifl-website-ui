@@ -56,11 +56,11 @@ jobs:
           # 3) Copy your deploy script into that scripts/ folder
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/"
       
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
-             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/deploy.sh"
