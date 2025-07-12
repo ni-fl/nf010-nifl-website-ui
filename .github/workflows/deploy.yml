@@ -14,65 +14,44 @@ jobs:
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Remix
-        run: npm run build
-
+      - name: Install dependencies & build
+        run: |
+          npm ci
+          npm run build
+          
       - name: Archive build
         run: |
           tar czf remix-build.tar.gz \
             build public package.json package-lock.json ecosystem.config.cjs
 
-      - name: Add Droplet to known_hosts
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
             >> ~/.ssh/known_hosts
-      
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          
-      - name: Run deploy script (with debug echo)
-        run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            " \
-              REMOTE_HOME=/home/${{ secrets.SERVER_USER }}; \
-              APP_DIR=\${REMOTE_HOME}/${{ secrets.REMOTE_PATH }}; \
-              SCRIPT_PATH=\${APP_DIR}/scripts/deploy.sh; \
-              echo \"→ REMOTE_HOME:      \$REMOTE_HOME\"; \
-              echo \"→ APP_DIR:          \$APP_DIR\"; \
-              echo \"→ SCRIPT_PATH:      \$SCRIPT_PATH\"; \
-              ls -l \"\$SCRIPT_PATH\" || echo \"(script missing)\"; \
-              bash \"\$SCRIPT_PATH\" \
-            "
-            
+
       - name: Prepare remote dirs
         run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" \
+          ssh -i ~/.ssh/id_rsa -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p ~/${{ secrets.REMOTE_PATH }}/scripts"
-    
-      - name: Copy build archive
+            "mkdir -p /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts"
+
+      - name: Copy build & deploy script
         run: |
-          scp -P "${{ secrets.SERVER_PORT }}" \
+          scp -i ~/.ssh/id_rsa -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/"
-      
-      - name: Copy deploy script
-        run: |
-          scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/scripts/"
-      
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/"
+
       - name: Run deploy script
         run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" \
+          ssh -i ~/.ssh/id_rsa -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/\${REMOTE_PATH}/scripts/deploy.sh"
+            "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
+             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+
