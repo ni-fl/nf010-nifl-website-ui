@@ -38,25 +38,26 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Prepare remote dirs & copy files
+      - name: Prepare remote dirs
         run: |
-          # 1) Make sure both your app dir and its scripts/ subdir exist
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "mkdir -p ~/${{ secrets.REMOTE_PATH }}/scripts"
-
-          # 2) Copy the build tarball into your app root
+    
+      - name: Copy build archive
+        run: |
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/"
-
-          # 3) Copy your deploy.sh into the scripts/ subfolder
+      
+      - name: Copy deploy script
+        run: |
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/scripts/"
-
+      
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/\${REMOTE_PATH}/scripts/deploy.sh"
