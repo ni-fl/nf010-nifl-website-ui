@@ -55,3 +55,4 @@ jobs:
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "bash ~/Development/scripts/build-my-remix-app"
+
