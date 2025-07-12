@@ -40,14 +40,17 @@ jobs:
 
       - name: Copy build to server
         run: |
-          scp -P ${{ secrets.SERVER_PORT }} \
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "mkdir -p \$HOME/${{ secrets.REMOTE_PATH }}/scripts"
+          scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~
-          scp -r -P ${{ secrets.SERVER_PORT }} \
-            scripts \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~
+            scripts/deploy.sh \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:\$HOME/${{ secrets.REMOTE_PATH }}/scripts/"
+
       - name: SSH & deploy
         run: |
-          ssh -tt -p ${{ secrets.SERVER_PORT }} \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash ~/scripts/deploy.sh"
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "REMOTE_PATH=${{ secrets.REMOTE_PATH }} bash \$HOME/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+            
