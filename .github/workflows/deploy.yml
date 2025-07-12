@@ -9,19 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 1) Checkout & build
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - name: Install & build
         run: |
           npm ci
           npm run build
-          tar czf remix-build.tar.gz \
-            build public package.json package-lock.json ecosystem.config.cjs
+          tar czf remix-build.tar.gz build public package.json package-lock.json ecosystem.config.cjs
 
-      # 2) SSH auth setup
+      # 2) SSH setup
       - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
@@ -33,40 +36,25 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3) Copy the build to the server
-      - name: Copy build to server
+      # 3) Deploy
+      - name: Copy and deploy
         run: |
+          # Copy the build archive to home
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
 
-      # 4) SSH in and deploy inline
-      - name: SSH & deploy
-        run: |
-          ssh -tt -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
-            set -e
-
-            # Your target directory under home:
-            TARGET="\$HOME/${{ secrets.REMOTE_PATH }}"
-
-            # Clean old release (contents only), recreate
-            rm -rf "\$TARGET"/*
-            mkdir -p "\$TARGET"
-
-            # Unpack the new build
-            tar xzf ~/remix-build.tar.gz -C "\$TARGET"
-            rm ~/remix-build.tar.gz
-
-            cd "\$TARGET"
-
-            # Install production dependencies
-            npm ci --omit=dev
-
-            # Reload (or start) via PM2
-            pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui \
-              || pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui
-
-            # Persist the PM2 process list
-            pm2 save
-          EOF
+          # SSH in and run the whole deploy in one go
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "set -e; \
+             REMOTE=\$HOME/${{ secrets.REMOTE_PATH }}; \
+             rm -rf \"\$REMOTE\"/*; \
+             mkdir -p \"\$REMOTE\"; \
+             tar xzf ~/remix-build.tar.gz -C \"\$REMOTE\"; \
+             rm ~/remix-build.tar.gz; \
+             cd \"\$REMOTE\"; \
+             npm ci --omit=dev; \
+             pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui || \
+               pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui; \
+             pm2 save"
