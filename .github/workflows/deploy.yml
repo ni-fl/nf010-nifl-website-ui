@@ -51,7 +51,7 @@ jobs:
           # 2) Copy the build tarball into the app root
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/remix-build.tar.gz"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/remix-build.tar.gz"
 
           # 3) Copy your deploy script into that scripts/ folder
           scp -P "${{ secrets.SERVER_PORT }}" \
