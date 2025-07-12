@@ -38,7 +38,7 @@ jobs:
           # Create app dir + scripts subdir
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p ~/${{ secrets.REMOTE_PATH }}/scripts"
+            "mkdir -p \$HOME/${{ secrets.REMOTE_PATH }}/scripts"
           
           # Copy the build tarball to home (so deploy.sh can find ~/remix-build.tar.gz)
           scp -P "${{ secrets.SERVER_PORT }}" \
@@ -48,7 +48,7 @@ jobs:
           # Copy your deploy script into scripts/
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ secrets.REMOTE_PATH }}/scripts/"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:\$HOME/${{ secrets.REMOTE_PATH }}/scripts/"
 
       # 4) Run the deploy
       - name: Run deploy script
