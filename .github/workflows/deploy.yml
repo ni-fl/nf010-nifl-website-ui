@@ -25,7 +25,7 @@ jobs:
       - name: Add Droplet to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" \
+          ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
             >> ~/.ssh/known_hosts
 
       - name: Start SSH agent
@@ -33,37 +33,40 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3) Sanity check deploy script
-      - name: Ensure deploy script exists
+      # 3) Copy the build to the server
+      - name: Copy build to server
         run: |
-          if [[ ! -f scripts/deploy.sh ]]; then
-            echo "❌ Error: scripts/deploy.sh not found in repo root"
-            exit 1
-          fi
-
-      # 4) Create remote dirs and copy artifacts
-      - name: Copy artifacts to server
-        run: |
-          REMOTE_DIR="/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}"
-          echo "→ Creating remote directories at $REMOTE_DIR/scripts"
-          ssh -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "mkdir -p \"$REMOTE_DIR/scripts\""
-
-          echo "→ Copying build archive"
           scp -P "${{ secrets.SERVER_PORT }}" \
             remix-build.tar.gz \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/remix-build.tar.gz"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
 
-          echo "→ Copying deploy script"
-          scp -P "${{ secrets.SERVER_PORT }}" \
-            scripts/deploy.sh \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/scripts/deploy.sh"
-
-      # 5) Run the deploy script
-      - name: Run deploy script
+      # 4) SSH in and deploy inline
+      - name: SSH & deploy
         run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "export REMOTE_PATH='${{ secrets.REMOTE_PATH }}' && \
-             bash /home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
+          ssh -tt -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
+            set -e
+
+            # Your target directory under home:
+            TARGET="\$HOME/${{ secrets.REMOTE_PATH }}"
+
+            # Clean old release (contents only), recreate
+            rm -rf "\$TARGET"/*
+            mkdir -p "\$TARGET"
+
+            # Unpack the new build
+            tar xzf ~/remix-build.tar.gz -C "\$TARGET"
+            rm ~/remix-build.tar.gz
+
+            cd "\$TARGET"
+
+            # Install production dependencies
+            npm ci --omit=dev
+
+            # Reload (or start) via PM2
+            pm2 reload ecosystem.config.cjs --env production --only nf010-nifl-website-ui \
+              || pm2 start ecosystem.config.cjs --env production --only nf010-nifl-website-ui
+
+            # Persist the PM2 process list
+            pm2 save
+          EOF
