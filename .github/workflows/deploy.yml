@@ -57,7 +57,35 @@ jobs:
           scp -P "${{ secrets.SERVER_PORT }}" \
             scripts/deploy.sh \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}/scripts/deploy.sh"
-      
+      - name: Copy artifacts & debug
+        run: |
+          REMOTE_DIR="/home/${{ secrets.SERVER_USER }}/${{ secrets.REMOTE_PATH }}"
+          echo "Remote dir is: $REMOTE_DIR"
+          
+          # ensure scripts folder exists
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "mkdir -p $REMOTE_DIR/scripts"
+
+          echo "--- SCP remix-build.tar.gz → $REMOTE_DIR/remix-build.tar.gz ---"
+          scp -vvv -P "${{ secrets.SERVER_PORT }}" \
+            remix-build.tar.gz \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/remix-build.tar.gz"
+
+          echo "--- SCP deploy.sh → $REMOTE_DIR/scripts/deploy.sh ---"
+          scp -vvv -P "${{ secrets.SERVER_PORT }}" \
+            scripts/deploy.sh \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/scripts/deploy.sh"
+
+          echo "--- Remote root listing ($REMOTE_DIR) ---"
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "ls -l $REMOTE_DIR"
+
+          echo "--- Remote scripts listing ($REMOTE_DIR/scripts) ---"
+          ssh -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "ls -l $REMOTE_DIR/scripts"
       - name: Run deploy script
         run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
