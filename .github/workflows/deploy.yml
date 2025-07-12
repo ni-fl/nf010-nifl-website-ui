@@ -42,20 +42,16 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # COPY AND DEPLOY
-      - name: Copy and deploy
+      # COPY BUILD ARCIVE
+      - name: Copy build archive
         run: |
-          scp -P "${{ secrets.SERVER_PORT }}" remix-build.tar.gz "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
+          scp -P "${{ secrets.SERVER_PORT }}" \
+            remix-build.tar.gz \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/remix-build.tar.gz"
+
+      # START TRIGGER RMOTE DEPLOY SCRIPT
+      - name: Trigger remote deploy script
+        run: |
           ssh -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "set -e; \
-             rm -rf \"\$HOME/${{ secrets.REMOTE_PATH }}\"/*; \
-             mkdir -p \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
-             tar xzf \"\$HOME/remix-build.tar.gz\" -C \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
-             rm \"\$HOME/remix-build.tar.gz\"; \
-             cd \"\$HOME/${{ secrets.REMOTE_PATH }}\"; \
-             npm ci --omit=dev; \
-             pm2 reload ecosystem.config.cjs --env production --only my-remix-app; \
-             pm2 start ecosystem.config.cjs --env production --only my-remix-app; \
-             pm2 save"
-
+            "bash ~/Development/scripts/build-my-remix-app"
