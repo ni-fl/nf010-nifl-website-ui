@@ -27,11 +27,19 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} \
             >> ~/.ssh/known_hosts
+      
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Ensure deploy script exists
+        run: |
+          if [[ ! -f scripts/deploy.sh ]]; then
+            echo "❌ Error: scripts/deploy.sh not found in repo root (expected at $GITHUB_WORKSPACE/scripts/deploy.sh)"
+            exit 1
+          fi
+          
       # 3) Copy artifacts
       - name: Prepare remote dirs & copy files
         run: |
